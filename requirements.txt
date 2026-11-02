@@ -1,0 +1,16 @@
+certifi==2026.10.23
+charset-normalizer==3.5.2
+garmin-connect-personal-api-python==1.0.0
+idna==3.20
+requests==2.34.2
+urllib3==2.8.0
+certifi==2026.10.23
+charset-normalizer==3.5.2
+garmin-connect-personal-api-python==1.0.0
+idna==3.20
+markdown-it-py==4.2.0
+mdurl==0.1.2
+Pygments==2.21.0
+requests==2.34.2
+rich==14.3.4
+urllib3==2.8.0
