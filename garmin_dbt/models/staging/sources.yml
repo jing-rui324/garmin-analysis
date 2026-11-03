@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: garmin_raw
+    schema: raw
+    tables:
+      - name: garmin_activities
