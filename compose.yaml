@@ -7,3 +7,8 @@ services:
       POSTGRES_DB: garmin
     ports:
       - "55432:5432"
+    volumes:
+      - "pgdata:/var/lib/postgresql/data"
+
+volumes:
+  pgdata:
