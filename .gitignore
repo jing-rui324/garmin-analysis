@@ -1,0 +1,10 @@
+.env
+venv/
+.venv/
+__pycache__/
+*.pyc
+data/
+*.fit
+postgres_data/
+garmin-running-pipeline-brief.md
+.vscode/
