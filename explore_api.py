@@ -137,7 +137,7 @@ def main():
 
     SAMPLE_PATH.parent.mkdir(exist_ok=True)
     with open(SAMPLE_PATH, "w", encoding="utf-8") as f:
-        json.dump(cleaned, f, indent=2)
+        json.dump(cleaned, f, indent=2, sort_keys=True)
     print(f"Saved scrubbed sample ({sample['activityType']['typeKey']}) to {SAMPLE_PATH}")
 
 
