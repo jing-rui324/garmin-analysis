@@ -8,3 +8,5 @@ data/
 postgres_data/
 garmin-running-pipeline-brief.md
 .vscode/
+logs/
+docs/learning-notes.md
