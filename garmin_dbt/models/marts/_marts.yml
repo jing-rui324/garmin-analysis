@@ -17,7 +17,59 @@ models:
         description: Garmin running subtypes (running, treadmill_running, track_running)
         data_tests:
           - accepted_values:
+              name: accepted_run_types
               arguments:
                 values: ["running", "treadmill_running", "track_running"]
+              config:
+                severity: warn
+      - name: max_hr
+        description: Maximum heart rate recorded, usually below 200 bpm
+        data_tests:
+          - dbt_utils.accepted_range:
+              name: max_hr_impossible
+              arguments:
+                min_value: 30
+                max_value: 230
+              config:
+                severity: error
+          - dbt_utils.accepted_range:
+              name: max_hr_unlikely
+              arguments:
+                max_value: 200
+              config:
+                severity: warn
+      - name: average_hr
+        description: Average heart rate over the run, NULL if recorded without HR
+        data_tests:
+          - dbt_utils.accepted_range:
+              name: average_hr_impossible
+              arguments:
+                max_value: 200
+              config:
+                severity: error
+      - name: pace_min_per_km
+        description: Pace in minutes per kilometer, calculated from distance and duration
+        data_tests:
+          - dbt_utils.accepted_range:
+              name: pace_min_per_km_impossible
+              arguments:
+                min_value: 2.5
+              config:
+                severity: error
+          - dbt_utils.accepted_range:
+              name: pace_min_per_km_unlikely
+              arguments:
+                min_value: 3
+                max_value: 15
+              config:
+                severity: warn
+      - name: distance_km
+        description: Distance in kilometers
+        data_tests:
+          - dbt_utils.accepted_range:
+              name: distance_km_unlikely
+              arguments:
+                min_value: 0.1
+                max_value: 100
               config:
                 severity: warn
