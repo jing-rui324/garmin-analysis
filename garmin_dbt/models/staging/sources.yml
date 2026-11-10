@@ -3,5 +3,17 @@ version: 2
 sources:
   - name: garmin_raw
     schema: raw
+    description: Raw Garmin Connect data, loaded untouched by ingestion.py
     tables:
       - name: garmin_activities
+        description: One row per Garmin activity (all types), full JSON in payload
+        columns:
+          - name: activity_id
+            description: Garmin's activity ID; primary key, upserted on
+            data_tests:
+              - unique
+              - not_null
+          - name: start_time
+            description: Activity start in UTC (from startTimeGMT)
+            data_tests:
+              - not_null

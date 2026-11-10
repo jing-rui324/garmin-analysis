@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: fct_runs
+    description: One row per run (all running subtypes), full precision
+    columns:
+      - name: activity_id
+        description: Garmin's activity ID; primary key
+        data_tests:
+          - not_null
+          - unique
+      - name: activity_date
+        description: Activity start local date (YYYY-MM-DD)
+        data_tests:
+          - not_null
+      - name: activity_type
+        description: Garmin running subtypes (running, treadmill_running, track_running)
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["running", "treadmill_running", "track_running"]
+              config:
+                severity: warn
