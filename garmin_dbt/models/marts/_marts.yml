@@ -73,3 +73,18 @@ models:
                 max_value: 100
               config:
                 severity: warn
+
+  - name: agg_weekly_training
+    description: Aggregated weekly training metrics with 4 week rolling average distance
+    columns:
+      - name: week_start_date
+        description: Start of the week (Monday) in local time
+        data_tests:
+          - not_null
+          - unique
+      - name: rolling_4wk_distance_km
+        description: >
+          Average weekly distance over the current and previous 3 weeks (zero weeks count as 0). 
+          NULL until 4 weeks of history exist, and for the current, incomplete week.
+      - name: pace_min_per_km
+        description: total time ÷ total distance, NULL in weeks without runs
