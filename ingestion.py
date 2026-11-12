@@ -1,6 +1,7 @@
 import os
 from datetime import date, timezone, datetime, timedelta
 import logging
+import argparse
 
 from dotenv import load_dotenv
 from garmin_personal_api import (
@@ -138,7 +139,44 @@ def incremental_window(connection, lookback_days=3):
     return start_date, end_date
 
 
+def parse_args(argv=None):
+    """Parse and validate command-line arguments."""
+    parser = argparse.ArgumentParser(description="Ingest activities from Garmin API")
+    parser.add_argument(
+        "--start", type=date.fromisoformat, help="Start date for ingestion"
+    )
+    parser.add_argument(
+        "--end", type=date.fromisoformat, help="End date for ingestion"
+    )
+    parser.add_argument(
+        "--chunk-days",
+        type=int,
+        default=30,
+        help="Number of days per chunk for ingestion",
+    )
+    args = parser.parse_args(argv)
+
+    if args.chunk_days <= 0:
+        parser.error("Chunk days must be a positive integer.")
+
+    if args.start is not None and args.end is not None:
+        if args.start < DEFAULT_START_DATE:
+            parser.error(
+                f"Start dates must not be earlier than {DEFAULT_START_DATE}."
+            )
+        if args.end > date.today():
+            parser.error("End date cannot be in the future.")
+        if args.start > args.end:
+            parser.error("Start date cannot be after end date.")
+    elif (args.start is None) != (args.end is None):
+        parser.error("Both --start and --end must be provided together.")
+
+    return args
+
+
 def main():
+    args = parse_args()
+
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
@@ -148,8 +186,14 @@ def main():
         raise SystemExit("DATABASE_URL not found. Check your .env file")
 
     with get_client() as client, psycopg.connect(database_url) as connection:
-        start_date, end_date = incremental_window(connection)
-        total = ingest_window(client, connection, start_date, end_date)
+        if args.start is not None:
+            start_date = args.start
+            end_date = args.end
+        else:
+            start_date, end_date = incremental_window(connection)
+        total = ingest_window(
+            client, connection, start_date, end_date, chunk_days=args.chunk_days
+        )
         logger.info(
             "Ingested a total of %d activities from %s to %s.",
             total,
