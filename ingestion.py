@@ -7,6 +7,7 @@ from garmin_personal_api import (
     GarminPersonalApiClient,
     PersonalApiAuthenticator,
 )
+
 import psycopg
 from psycopg.types.json import Jsonb
 
@@ -46,18 +47,37 @@ def get_client():
     return GarminPersonalApiClient(token.access_token)
 
 
+def date_chunks(start_date, end_date, chunk_days=30):
+    """Split the date range into chunks of chunk_days."""
+    if chunk_days <= 0:
+        raise ValueError(
+            f"Chunk days: {chunk_days} is invalid. It must be a positive integer"
+        )
+
+    if end_date < start_date:
+        raise ValueError(f"End date: {end_date} is before Start date: {start_date}")
+
+    chunks_list = []
+    current_start = start_date
+    while current_start <= end_date:
+        current_end = min(current_start + timedelta(days=chunk_days - 1), end_date)
+        chunks_list.append((current_start, current_end))
+        current_start = current_end + timedelta(days=1)
+    return chunks_list
+
+
 def fetch_activities(client, start_date, end_date):
     """Fetch all activities between start_date and end_date, handling pagination."""
     start, limit = 0, 99
     activities = []
 
-    logger.info(f"Fetching activities from %s to %s", start_date, end_date)
+    logger.debug("Fetching activities from %s to %s", start_date, end_date)
     while True:
         page = client.search_activities(
             start=start, limit=limit, start_date=start_date, end_date=end_date
         )
         activities.extend(page)
-        logger.debug(f"Fetched %d activities at offset %d", len(page), start)
+        logger.debug("Fetched %d activities at offset %d", len(page), start)
 
         if len(page) < limit:
             break
@@ -85,6 +105,27 @@ def upsert_activities(connection, activities):
     return len(activities)
 
 
+def ingest_window(client, connection, start_date, end_date, chunk_days=30):
+    """Ingest activities in chunks between start_date and end_date."""
+    total = 0
+    chunks = date_chunks(start_date, end_date, chunk_days)
+
+    for i, (chunk_start, chunk_end) in enumerate(chunks, start=1):
+        activities = fetch_activities(client, chunk_start, chunk_end)
+        count = upsert_activities(connection, activities)
+        total += count
+        logger.info(
+            "Chunk %d/%d (%s to %s): Upserted %d activities into the database.",
+            i,
+            len(chunks),
+            chunk_start,
+            chunk_end,
+            count,
+        )
+
+    return total
+
+
 def incremental_window(connection, lookback_days=3):
     """Determine the start and end dates for incremental ingestion."""
     latest_start_time = connection.execute(MAX_START_SQL).fetchone()[0]
@@ -98,7 +139,9 @@ def incremental_window(connection, lookback_days=3):
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
     load_dotenv()
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -106,9 +149,13 @@ def main():
 
     with get_client() as client, psycopg.connect(database_url) as connection:
         start_date, end_date = incremental_window(connection)
-        activities = fetch_activities(client, start_date, end_date)
-        count = upsert_activities(connection, activities)
-        logger.info(f"Upserted %d activities into the database.", count)
+        total = ingest_window(client, connection, start_date, end_date)
+        logger.info(
+            "Ingested a total of %d activities from %s to %s.",
+            total,
+            start_date,
+            end_date,
+        )
 
 
 if __name__ == "__main__":
