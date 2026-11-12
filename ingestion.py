@@ -1,5 +1,6 @@
 import os
 from datetime import date, timezone, datetime, timedelta
+import logging
 
 from dotenv import load_dotenv
 from garmin_personal_api import (
@@ -8,6 +9,8 @@ from garmin_personal_api import (
 )
 import psycopg
 from psycopg.types.json import Jsonb
+
+logger = logging.getLogger(__name__)
 
 INSERT_SQL = """
     INSERT INTO raw.garmin_activities (
@@ -48,13 +51,13 @@ def fetch_activities(client, start_date, end_date):
     start, limit = 0, 99
     activities = []
 
-    print(f"Fetching activities from {start_date} to {end_date}")
+    logger.info(f"Fetching activities from %s to %s", start_date, end_date)
     while True:
         page = client.search_activities(
             start=start, limit=limit, start_date=start_date, end_date=end_date
         )
         activities.extend(page)
-        print(f"Fetched {len(page)} activities at offset {start}")
+        logger.debug(f"Fetched %d activities at offset %d", len(page), start)
 
         if len(page) < limit:
             break
@@ -95,6 +98,7 @@ def incremental_window(connection, lookback_days=3):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     load_dotenv()
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -104,7 +108,7 @@ def main():
         start_date, end_date = incremental_window(connection)
         activities = fetch_activities(client, start_date, end_date)
         count = upsert_activities(connection, activities)
-        print(f"Upserted {count} activities into the database.")
+        logger.info(f"Upserted %d activities into the database.", count)
 
 
 if __name__ == "__main__":
